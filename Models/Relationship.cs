@@ -5,10 +5,9 @@ using System.Text;
 
 namespace InstaSharp.Models {
     public class Relationship {
-        [JsonMapping("outgoing_status", JsonMapping.MappingType.Primitive)]
         public string OutgoingStatus { get; set; }
-        [JsonMapping("incoming_status", JsonMapping.MappingType.Primitive)]
         public string IncomingStatus { get; set; }
+        public bool TargetUserIsPrivate { get; set; }
     }
 
 }
