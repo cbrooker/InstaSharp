@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using InstaSharp.Models.Responses;
+using RestSharp;
 
 namespace InstaSharp.Endpoints {
     public class Users : InstagramAPI {
@@ -11,9 +12,9 @@ namespace InstaSharp.Endpoints {
         /// User Endpoints
         /// </summary>
         /// <param name="config">An instance of the InstagramConfiguration class</param>
-        /// <param name="authInfo">An instance of the AuthInfo class</param>
-        public Users(InstagramConfig config, AuthInfo authInfo = null)
-            : base("/users/", config, authInfo) { }
+        /// <param name="OAuthResponse">An instance of the AuthInfo class</param>
+        public Users(InstagramConfig config, OAuthResponse OAuthResponse = null)
+            : base("users", config, OAuthResponse) { }
 
         /// <summary>
         /// Get basic information about a user.
@@ -23,25 +24,14 @@ namespace InstaSharp.Endpoints {
         /// </summary>
         /// <paramref name="userId">The id of the user who's profile you want to retreive.</paramref>
         /// <returns>
-        /// UserResponse
+        /// IRestResponse With Data Of Type UserResponse
         /// </returns>
-        public UserResponse Get(int? userId = null) {
-            return (UserResponse)Mapper.Map<UserResponse>(GetJson(userId));
-        }
-
-        /// <summary>
-        /// Get basic information about a user.
-        /// <para>
-        /// <c>Requires Authentication: False</c>
-        /// </para>
-        /// </summary>
-        /// <paramref name="userId">The id of the user who's profile you want to retreive.</paramref>
-        /// <returns>
-        /// String
-        /// </returns>
-        private string GetJson(int? userId) {
-            base.FormatUri(userId == null ? base.AuthInfo.User.Id.ToString() : userId.ToString());
-            return HttpClient.GET(base.Uri.ToString());
+        public IRestResponse<UserResponse> Get(string userId = null) {
+            var request = base.Request("{id}");
+ 
+            request.AddUrlSegment("id", !string.IsNullOrEmpty(userId) ? userId.ToString() : base.OAuthResponse.User.Id.ToString());
+             
+            return Client.Execute<Models.Responses.UserResponse>(request);
         }
 
         /// <summary>
@@ -51,43 +41,41 @@ namespace InstaSharp.Endpoints {
         /// </para>
         /// </summary>
         /// <returns>
-        /// MediasResponse
+        /// IRestResponse With Data Of Type MediasResponse
         /// </returns>
-        public MediasResponse Feed() {
-            return (MediasResponse)Mapper.Map<MediasResponse>(FeedJson(string.Empty, 0));
+        public IRestResponse<MediasResponse> Feed(string maxId = null, int? count = null) {
+            var request = base.Request("self/feed");
+
+            request.AddParameter("max_id", maxId);
+            request.AddParameter("count", count);
+
+            return Client.Execute<MediasResponse>(request);
         }
 
         /// <summary>
-        /// See the authenticated user's feed.
+        /// Get the most recent media published by the logged in user. 
         /// <para>
         /// <c>Requires Authentication: True</c>
         /// </para>
         /// </summary>
-        /// <paramref name="maxId">Return media earlier than this max_id.</paramref>
-        /// <paramref name="count">Count of media to return.</paramref>
-        /// <returns>MediasResponse
-        /// </returns>
-        public MediasResponse Feed(string maxId = "", int? count = null) {
-            return (MediasResponse)Mapper.Map<MediasResponse>(FeedJson(maxId, count));
-        }
+        /// <param name="maxId">Return media earlier than this max_id.</param>
+        /// <param name="minId">Return media later than this min_id.</param>
+        /// <param name="count">Count of media to return.</param>
+        /// <param name="minTimestamp">Return media after this timestamp.</param>
+        /// <param name="maxTimestamp">Return media before this timestamp.</param>
+        /// <returns>IRestRequest With Data Of Type MediasResponse</returns>
+        public IRestResponse<MediasResponse> RecentSelf(string maxId = "", string minId = "", int? count = null, DateTime? minTimestamp = null, DateTime? maxTimestamp = null) {
+            var request = base.Request("{id}/media/recent");
 
-        /// <summary>
-        /// See the authenticated user's feed.
-        /// <para>
-        /// <c>Requires Authentication: True</c>
-        /// </para>
-        /// </summary>
-        /// <paramref name="maxId">Return media earlier than this max_id.</paramref>
-        /// <paramref name="count">Count of media to return.</paramref>
-        /// <returns>String
-        /// </returns>
-        private string FeedJson(string maxId, int? count) {
-            base.FormatUri("self/feed");
+            request.AddUrlSegment("id", OAuthResponse.User.Id.ToString());
 
-            if (!string.IsNullOrEmpty(maxId)) base.Uri.AppendFormat("&max_id={0}", maxId);
-            if (count != null) base.Uri.AppendFormat("&count={0}", count);
+            if (!string.IsNullOrEmpty(maxId)) request.AddParameter("max_id", maxId);
+            if (!string.IsNullOrEmpty(minId)) request.AddParameter("min_id", minId);
+            if (count.HasValue) request.AddParameter("count", count);
+            if (minTimestamp.HasValue) request.AddParameter("min_timestamp", ((DateTime)minTimestamp).ToUnixTimestamp());
+            if (maxTimestamp.HasValue) request.AddParameter("max_timestamp", ((DateTime)maxTimestamp).ToUnixTimestamp());
 
-            return HttpClient.GET(base.Uri.ToString());
+            return Client.Execute<MediasResponse>(request);
         }
 
         /// <summary>
@@ -96,38 +84,25 @@ namespace InstaSharp.Endpoints {
         /// <c>Requires Authentication: True</c>
         /// </para>
         /// </summary>
+        /// <param name="id">The id of the user.</param>
         /// <param name="maxId">Return media earlier than this max_id.</param>
         /// <param name="minId">Return media later than this min_id.</param>
         /// <param name="count">Count of media to return.</param>
         /// <param name="minTimestamp">Return media after this timestamp.</param>
         /// <param name="maxTimestamp">Return media before this timestamp.</param>
-        /// <returns>MediasResponse</returns>
-        public MediasResponse Recent(string maxId = "", string minId = "", int? count = null, DateTime? minTimestamp = null, DateTime? maxTimestamp = null) {
-            return (MediasResponse)Mapper.Map<MediasResponse>(RecentJson(maxId, minId, count, minTimestamp, maxTimestamp));
-        }
+        /// <returns>IRestRequest With Data Of Type MediasResponse</returns>
+        public IRestResponse<MediasResponse> Recent(string id, string maxId = "", string minId = "", int? count = null, DateTime? minTimestamp = null, DateTime? maxTimestamp = null) {
+            var request = base.Request("{id}/media/recent");
 
-        /// <summary>
-        /// Get the most recent media published by a user.
-        /// <para>
-        /// <c>Requires Authentication: True</c>
-        /// </para>
-        /// </summary>
-        /// <param name="maxId">Return media earlier than this max_id.</param>
-        /// <param name="minId">Return media later than this min_id.</param>
-        /// <param name="count">Count of media to return.</param>
-        /// <param name="minTimestamp">Return media after this timestamp.</param>
-        /// <param name="maxTimestamp">Return media before this timestamp.</param>
-        /// <returns>String</returns>
-        public string RecentJson(string maxId = "", string minId = "", int? count = null, DateTime? minTimestamp = null, DateTime? maxTimestamp = null) {
-            base.FormatUri(string.Format("{0}/media/recent", AuthInfo.User.Id));
+            request.AddUrlSegment("id", id);
 
-            if (!string.IsNullOrEmpty(maxId)) base.Uri.AppendFormat("&max_id={0}", maxId);
-            if (!string.IsNullOrEmpty(minId)) base.Uri.AppendFormat("&min_id={0}", minId);
-            if (count != null) base.Uri.AppendFormat("&count={0}", count);
-            if (minTimestamp != null) base.Uri.AppendFormat("&min_timestamp={0}", ((DateTime)minTimestamp).ToUnixTimestamp());
-            if (maxTimestamp != null) base.Uri.AppendFormat("&max_timestamp={1}" + ((DateTime)maxTimestamp).ToUnixTimestamp());
+            if (!string.IsNullOrEmpty(maxId)) request.AddParameter("max_id", maxId);
+            if (!string.IsNullOrEmpty(minId)) request.AddParameter("min_id", minId);
+            if (count.HasValue) request.AddParameter("count", count);
+            if (minTimestamp.HasValue) request.AddParameter("min_timestamp", ((DateTime)minTimestamp).ToUnixTimestamp());
+            if (maxTimestamp.HasValue) request.AddParameter("max_timestamp", ((DateTime)maxTimestamp).ToUnixTimestamp());
 
-            return HttpClient.GET(base.Uri.ToString());
+            return Client.Execute<MediasResponse>(request);
         }
 
         /// <summary>
@@ -136,26 +111,16 @@ namespace InstaSharp.Endpoints {
         /// <c>Requires Authentication: True</c>
         /// </para>
         /// </summary>
-        public MediasResponse Liked(string max_like_id = "", int? count = 20) {
-            return (MediasResponse)Mapper.Map<MediasResponse>(LikedJson(max_like_id, count));
-        }
-
-        /// <summary>
-        /// See the authenticated user's list of media they've liked. Note that this list is ordered by the order in which the user liked the media. Private media is returned as long as the authenticated user has permission to view that media. Liked media lists are only available for the currently authenticated user.
-        /// <para>
-        /// <c>Requires Authentication: True</c>
-        /// </para>
-        /// </summary>
-        /// <param name="max_like_id">Return media liked before this id.</param>
+        /// <param name="max_like_id">Return media ealier than this max_like_id.</param>
         /// <param name="count">Count of media to return.</param>
-        /// <returns>String</returns>
-        public string LikedJson(string max_like_id = "", int? count = 20) {
-            base.FormatUri("self/media/liked");
+        /// <returns>IRestResponse With Data Of Type MediasResponse</returns> 
+        public IRestResponse<MediasResponse> Liked(string max_like_id = null, int? count = 20) {
+            var request = base.Request("self/media/liked");
 
-            if (!string.IsNullOrEmpty(max_like_id)) base.Uri.AppendFormat("&max_like_id={0}", max_like_id);
-            if (count != null) base.Uri.AppendFormat("&count={0}", count);
+            request.AddParameter("max_like_id", max_like_id);
+            request.AddParameter("count", count);
 
-            return HttpClient.GET(base.Uri.ToString());
+            return base.Client.Execute<MediasResponse>(request);            
         }
 
         /// <summary>
@@ -167,25 +132,13 @@ namespace InstaSharp.Endpoints {
         /// <param name="searchTem">A query string.</param>
         /// <param name="count">Number of users to return.</param>
         /// <returns>UsersResponse</returns>
-        public UsersResponse Search(string searchTerm, int? count = null) {
-            return (UsersResponse)Mapper.Map<UsersResponse>(SearchJson(searchTerm, count));
-        }
+        public IRestResponse<UsersResponse> Search(string searchTerm, int? count = null) {
+            var request = base.Request("search");
 
+            request.AddParameter("q", searchTerm);
+            request.AddParameter("count", count);
 
-        /// <summary>
-        /// Search for a user by name.
-        /// <para>
-        /// <c>Requires Authentication: False</c>
-        /// </para>
-        /// </summary>
-        /// <param name="searchTem">A query string.</param>
-        /// <param name="count">Number of users to return.</param>
-        /// <returns>String</returns>
-        private string SearchJson(string searchTerm, int? count = null) {
-            base.FormatUri("search");
-            base.Uri.AppendFormat("&q={0}", searchTerm);
-            if (count != null) base.Uri.AppendFormat("&count={0}", count);
-            return HttpClient.GET(base.Uri.ToString());
+            return base.Client.Execute<UsersResponse>(request);
         }
     }
 }

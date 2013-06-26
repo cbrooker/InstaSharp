@@ -5,44 +5,18 @@ using System.Text;
 
 namespace InstaSharp.Models {
     public class Media {
-
-        [JsonMapping("location", JsonMapping.MappingType.Class)]
-        public Models.Location Location { get; set; }
-        
-        [JsonMapping("comments", JsonMapping.MappingType.Class)]
-        public Models.Comments Comments { get; set; }
-        
-        [JsonMapping("caption", JsonMapping.MappingType.Primitive)]
-        public string Caption { get; set; }
-
-        [JsonMapping("user_has_liked", JsonMapping.MappingType.Primitive)]
+        public Location Location { get; set; }
+        public Comments Comments { get; set; }
+        public Caption Caption { get; set; }
         public bool UserHasLiked { get; set; }
-
-        [JsonMapping("link", JsonMapping.MappingType.Primitive)]
         public string Link { get; set; }
-        
-        [JsonMapping("likes", JsonMapping.MappingType.Class)]
-        public Like Likes { get; set; }
-        
-        [JsonMapping("created_time", JsonMapping.MappingType.Primitive)]
+        public Likes Likes { get; set; }
         public DateTime CreatedTime { get; set; }
-        
-        [JsonMapping("images", JsonMapping.MappingType.Class)]
         public Image Images { get; set; }
-        
-        [JsonMapping("type", JsonMapping.MappingType.Primitive)]
         public string Type { get; set; }
-        
-        [JsonMapping("filter", JsonMapping.MappingType.Primitive)]
         public string Filter { get; set; }
-        
-        [JsonMapping("tags", JsonMapping.MappingType.Collection)]
-        public IList<string> Tags { get; set; }
-        
-        [JsonMapping("id", JsonMapping.MappingType.Primitive)]
+        public List<string> Tags { get; set; }
         public string Id { get; set; }
-        
-        [JsonMapping("user", JsonMapping.MappingType.Class)]
-        public User User { get; set; }
+        public UserInfo User { get; set; }
     }
 }
